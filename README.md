@@ -9,7 +9,7 @@ This repository contains the final projects of Jadi's python courses : [advanced
   In this project, the program gets the raw html text from [Truecar](https://www.truecar.com/). 
   Next it parses and scraps the text and gets some data about each car and after that it saves it into a Database.
   ---
-2. __Final project (beginner course)__ 
+3. __Final project (beginner course)__
   the program contains 5 functions that each do a specific task.
   
   
