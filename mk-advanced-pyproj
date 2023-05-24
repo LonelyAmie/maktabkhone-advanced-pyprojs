@@ -1,0 +1,112 @@
+from bs4 import BeautifulSoup as bs
+import requests as req
+import re
+import mysql.connector
+from sklearn import tree
+from sklearn.preprocessing import LabelEncoder
+
+def StorageDetec (string) : # a function to return a numerical value for the storage for any given strings
+    group1 = 0
+    group2 = 0
+    
+    group1, group2 = re.search(r'(\d+)\D*(\d*)\D', string).groups()
+    
+    if len(group1) == 1 :
+        group1 = group1 + '000'
+    
+    elif len(group1) == 0 :
+        group1 = 0
+    
+    if len(group2) == 1 :
+        group2 = group2 + '000'
+    
+    elif len(group2) == 0 :
+        group2 = 0
+        
+    val = int(group1) + int(group2)
+    return val
+
+cnx = mysql.connector.connect(user = 'root', password = '1234', host = 'localhost', db = 'laptop')
+model = input('what model is your laptop?\nAsus Lenovo Hp Acer Msi Microsoft Dell \n').lower()
+
+with cnx.cursor() as cursor : 
+    
+    for i in range(1,21) :
+        url = f'https://adak.shop/product-category/laptop-and-accessories/laptop/{model}-laptops/page/{i}'
+        res = req.get(url)
+        soup = bs(res.text, 'lxml')
+
+        laptops = soup.find_all('div', class_ ='col-md-6 col-lg-6')
+
+        for laptop in laptops :
+            try : # if the item isn't available it passes and doesn't add it to the database
+                price = laptop.find('span', class_ = 'woocommerce-Price-amount amount').bdi.text
+                price = int(re.sub('\\xa0\w+|,','',price))
+            
+            except : 
+                continue
+            
+            
+            content_list = list(laptop.find('div', class_ = 'ipba-content-list').ul.children)[1 : -1]
+            cpu = re.sub(r'.*: ','', content_list[0].text)    
+            ram = int(re.sub(r'.+?(\d+).+','\g<1>', content_list[1].text))
+            storage = StorageDetec(re.sub(r'Storage : (.+)$','\g<1>',content_list[2].text))
+            
+            
+            
+            display = float(re.sub(r'.*(\d{2}\.*\d*).*','\g<1>', content_list[4].text))
+            
+            # inserts the given values into the database and if there's any duplicates, it skips it
+            cursor.execute('INSERT IGNORE INTO LAPTOP_DATA VALUES (%s, %s, %s, %s, %s);',\
+                          (cpu, ram, storage, display, price))
+            cnx.commit()
+
+clf = tree.DecisionTreeClassifier()
+x , y = [] , [] 
+
+with cnx.cursor() as cursor : 
+    cursor.execute('SELECT * FROM LAPTOP_DATA')
+    
+    all_data = cursor.fetchall()
+    for thing in all_data :
+        # the first 4 elements of each row, are the inputs that get appended to the x and the last one (price) is appended to the y
+        x.append((thing[0], thing[1], thing[2], thing[3]))
+        y.append(thing[4])
+
+    
+le = LabelEncoder()
+# extracts all the elements of x and put it in one single list my_list
+my_list = []
+for thing in x :  
+    my_list.extend(thing)
+
+# when the the extraction of datas is finished, the given inputs will be put in my_list
+
+user_cpu = input('cpu: ')
+user_ram = int(input('ram: '))
+
+# if the given string for storage is numerical, it will be changed to integer. if not, it will be given to storagedetec
+try : 
+    user_storage = int(input('storge: '))
+except :
+    user_storage = StorageDetec(input('storage: '))
+    
+    
+user_display = float(input('display: '))
+
+my_list.extend((user_cpu, user_ram, user_storage, user_display))
+my_list = list(le.fit_transform(my_list))
+
+x = list()
+for thing in my_list[:] :
+    # when the datas, are encoded, they will be tupled with the same order as before and appended to x (which is empty)
+
+    x.append((my_list.pop(0), my_list.pop(0), my_list.pop(0), my_list.pop(0)))
+    
+    if len(my_list) == 4 :
+        # when len(my_list) reached 4, it means that the remaining datas are the given inputs
+        my_list.append((my_list.pop(0), my_list.pop(0), my_list.pop(0), my_list.pop(0)))
+        break    
+
+clf.fit(x, y)
+print(clf.predict(my_list))
