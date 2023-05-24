@@ -4,8 +4,12 @@ This repository contains the final projects of Jadi's python courses : [advanced
   in this project, the program at first goes through [Adak shop](https://adak.shop), gets all the html text.  
   Then through using BeautifulSoup4, it scraps useful data from the raw text and saves each Laptops's scrapped data into a Database. 
   Next, it loads the data from the Database, and passes it to scikits-learn decision tree to predict the price of each Laptop with given data.
+  ---
 2. __Web scraping project (advanced course)__
   In this project, the program gets the raw html text from [Truecar](https://www.truecar.com/). 
   Next it parses and scraps the text and gets some data about each car and after that it saves it into a Database.
+  ---
+2. __Final project (beginner course)__ 
+  the program contains 5 functions that each do a specific task.
   
   
